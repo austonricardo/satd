@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Configurações - SATD Analyzer</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 760px; margin: 24px auto; padding: 0 12px; }
+      label { display: block; margin-top: 12px; font-weight: 600; }
+      input[type="text"], input[type="password"] { width: 100%; padding: 8px; }
+      .row { margin-top: 10px; }
+      button { margin-top: 16px; padding: 8px 12px; }
+      #status { margin-left: 8px; color: #0a7a3d; }
+    </style>
+  </head>
+  <body>
+    <h1>Configurações</h1>
+    <p>Defina token GitHub e API de classificação.</p>
+
+    <label for="githubToken">GitHub Token (opcional)</label>
+    <input id="githubToken" type="password" placeholder="ghp_..." />
+
+    <label for="classifierApiUrl">URL da API de classificação</label>
+    <input id="classifierApiUrl" type="text" placeholder="https://sua-api/classify" />
+
+    <label for="classifierApiKey">API Key (opcional)</label>
+    <input id="classifierApiKey" type="password" />
+
+    <label for="classifierModel">Modelo</label>
+    <input id="classifierModel" type="text" value="default" />
+
+    <div class="row">
+      <label><input id="langJava" type="checkbox" /> Java</label>
+      <label><input id="langPython" type="checkbox" /> Python</label>
+      <label><input id="includePyDoc" type="checkbox" /> Incluir docstrings Python</label>
+    </div>
+
+    <button id="saveBtn">Salvar</button>
+    <span id="status"></span>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SATD Analyzer</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>GitHub SATD Analyzer</h1>
+      <p id="repo-info">Abra um repositório no GitHub para iniciar.</p>
+
+      <div class="actions">
+        <button id="start-btn">Iniciar análise</button>
+        <button id="export-btn" disabled>Exportar CSV</button>
+      </div>
+
+      <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p id="status-text">Aguardando...</p>
+      </div>
+
+      <div class="progress-wrapper">
+        <div class="progress-label">
+          <span>Progresso</span>
+          <span id="progress-value">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div id="progress-fill"></div>
+        </div>
+      </div>
+
+      <section id="summary" class="summary hidden"></section>
+
+      <section class="chart-card hidden" id="chart-card">
+        <h2>Infográfico SATD</h2>
+        <canvas id="satd-chart" width="280" height="180"></canvas>
+      </section>
+    </main>
+
+    <script type="module" src="charts.js"></script>
+    <script type="module" src="panel.js"></script>
+  </body>
+</html>
