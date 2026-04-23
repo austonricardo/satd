@@ -2,7 +2,7 @@ import { detectLanguageFromPath } from "../core/language-config.js";
 import { extractJavaComments } from "../core/comment-extractors/java.js";
 import { extractPythonComments } from "../core/comment-extractors/python.js";
 import { listFilesRecursive, getFileContent, getDefaultBranch } from "./github-api.js";
-import { classifyComment } from "./classifier-api.js";
+import { classifyDataset } from "./classifier-api.js";
 
 function extractCommentsByLanguage(language, content, settings) {
   if (language === "java") return extractJavaComments(content);
@@ -24,6 +24,8 @@ export async function analyzeRepository(repoContext, settings, progressCallback 
   });
 
   const rows = [];
+  const classifierDataset = [];
+  let nextCommentId = 1;
   let processedFiles = 0;
 
   for (const path of targetFiles) {
@@ -42,13 +44,22 @@ export async function analyzeRepository(repoContext, settings, progressCallback 
       const comments = extractCommentsByLanguage(language, content, settings);
 
       for (const comment of comments) {
-        const classified = await classifyComment(comment, settings);
-        rows.push({
+        const idComentario = nextCommentId;
+        nextCommentId += 1;
+
+        const row = {
+          id_comentario: idComentario,
           projeto_branch_versao: `${owner}/${repo}@${branch}`,
           url_arquivo: `https://github.com/${owner}/${repo}/blob/${branch}/${path}`,
           comentario: comment,
-          is_satd: classified.is_satd,
-          classificacao_api: classified.classificacao_api
+          is_satd: false,
+          classificacao_api: "pending"
+        };
+        rows.push(row);
+        classifierDataset.push({
+          id_comentario: idComentario,
+          comentario: comment,
+          url_arquivo: row.url_arquivo
         });
       }
     } catch (error) {
@@ -61,6 +72,19 @@ export async function analyzeRepository(repoContext, settings, progressCallback 
       });
     }
   }
+
+  progressCallback({
+    phase: "classify_dataset",
+    progress: 95,
+    message: "Classificando dataset completo no web service..."
+  });
+
+  const classifications = await classifyDataset(classifierDataset, settings);
+  rows.forEach((row, index) => {
+    const classified = classifications[index] || {};
+    row.is_satd = Boolean(classified.is_satd);
+    row.classificacao_api = classified.classificacao_api || "error";
+  });
 
   progressCallback({ phase: "done", progress: 100, message: "Análise concluída." });
 
