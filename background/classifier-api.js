@@ -1,4 +1,16 @@
-export async function classifyComment(comment, settings = {}) {
+function normalizeClassification(item = {}) {
+  const rawClassification = item.classificacao_api || item.classificacao || item.classificação || item.label || "ok";
+  const normalizedLabel = String(rawClassification).toLowerCase();
+  const inferredIsSatd = normalizedLabel.includes("satd") && !normalizedLabel.includes("non_satd");
+
+  return {
+    is_satd: item.is_satd == null ? inferredIsSatd : Boolean(item.is_satd),
+    classificacao_api: rawClassification,
+    detail: item.detail || ""
+  };
+}
+
+export async function classifyDataset(dataset = [], settings = {}) {
   const {
     classifierApiUrl,
     classifierApiKey,
@@ -7,11 +19,15 @@ export async function classifyComment(comment, settings = {}) {
   } = settings;
 
   if (!classifierApiUrl) {
-    return {
+    return dataset.map(() => ({
       is_satd: false,
       classificacao_api: "not_configured",
       detail: "API não configurada"
-    };
+    }));
+  }
+
+  if (!Array.isArray(dataset) || dataset.length === 0) {
+    return [];
   }
 
   const controller = new AbortController();
@@ -26,31 +42,47 @@ export async function classifyComment(comment, settings = {}) {
       },
       body: JSON.stringify({
         model: classifierModel,
-        text: comment
+        dataset
       }),
       signal: controller.signal
     });
 
     if (!resp.ok) {
-      return {
+      return dataset.map(() => ({
         is_satd: false,
         classificacao_api: `http_${resp.status}`,
         detail: "Falha HTTP"
-      };
+      }));
     }
 
     const data = await resp.json();
-    return {
-      is_satd: Boolean(data.is_satd),
-      classificacao_api: data.classificacao_api || data.label || "ok",
-      detail: data.detail || ""
-    };
+    const apiResults = Array.isArray(data)
+      ? data
+      : Array.isArray(data.results)
+        ? data.results
+        : [];
+
+    const classificationById = new Map(
+      apiResults
+        .filter((item) => item && Number.isInteger(item.id_comentario))
+        .map((item) => [item.id_comentario, normalizeClassification(item)])
+    );
+
+    return dataset.map((item) => {
+      const classification = classificationById.get(item.id_comentario);
+      return classification || {
+        is_satd: false,
+        classificacao_api: "not_returned",
+        detail: "id_sem_retorno"
+      };
+    });
   } catch (error) {
-    return {
+    const detail = error?.name === "AbortError" ? "timeout" : "network_error";
+    return dataset.map(() => ({
       is_satd: false,
       classificacao_api: "error",
-      detail: error?.name === "AbortError" ? "timeout" : "network_error"
-    };
+      detail
+    }));
   } finally {
     clearTimeout(timeoutId);
   }

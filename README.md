@@ -36,7 +36,7 @@ Extensão MV3 para analisar comentários em repositórios GitHub, classificar SA
 2. Side panel inicia análise.
 3. Service worker lista arquivos via Git Trees API.
 4. Pipeline filtra linguagens (Java/Python) e extrai comentários.
-5. Cada comentário é classificado por API externa (com tolerância a falhas).
+5. Comentários são agrupados em um dataset com `id_comentario` incremental e enviados em uma única requisição para API externa.
 6. Resultado final exibe resumo + infográfico no painel.
 7. Usuário exporta CSV via `chrome.downloads`.
 
