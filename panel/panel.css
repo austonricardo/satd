@@ -96,3 +96,63 @@ button[disabled] {
 .hidden {
   display: none;
 }
+
+.dataset-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.dataset-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dataset-header h2 {
+  margin: 0;
+}
+
+#dataset-count {
+  color: #4b5563;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.table-wrapper {
+  margin-top: 10px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+#dataset-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 760px;
+  width: 100%;
+}
+
+#dataset-table th,
+#dataset-table td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+#dataset-table th {
+  background: #eff6ff;
+  color: #1e3a8a;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+#dataset-table td:nth-child(3),
+#dataset-table td:nth-child(4) {
+  max-width: 280px;
+  overflow-wrap: anywhere;
+}

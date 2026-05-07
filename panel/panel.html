@@ -12,7 +12,8 @@
       <p id="repo-info">Abra um repositório no GitHub para iniciar.</p>
 
       <div class="actions">
-        <button id="start-btn">Iniciar análise</button>
+        <button id="extract-btn">Extrair do repositório</button>
+        <button id="analyze-btn" disabled>Analisar</button>
         <button id="export-btn" disabled>Exportar CSV</button>
       </div>
 
@@ -32,6 +33,28 @@
       </div>
 
       <section id="summary" class="summary hidden"></section>
+
+      <section id="dataset-card" class="dataset-card hidden">
+        <div class="dataset-header">
+          <h2>Dataset extraído</h2>
+          <span id="dataset-count">0 registros</span>
+        </div>
+        <div class="table-wrapper">
+          <table id="dataset-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Projeto/branch</th>
+                <th>Arquivo</th>
+                <th>Comentário</th>
+                <th>is_satd</th>
+                <th>classificacao_api</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
 
       <section class="chart-card hidden" id="chart-card">
         <h2>Infográfico SATD</h2>

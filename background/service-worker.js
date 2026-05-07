@@ -1,4 +1,4 @@
-import { analyzeRepository } from "./pipeline.js";
+import { analyzeExtractedDataset, extractRepository } from "./pipeline.js";
 import { downloadCsv } from "./csv-exporter.js";
 
 const STATE = {
@@ -41,16 +41,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
 
       const safeRepo = STATE.latestResult.repo.replace(/\//g, "-");
-      await downloadCsv(STATE.latestResult.rows, `${safeRepo}-${STATE.latestResult.branch}-satd.csv`);
+      const suffix = STATE.latestResult.analyzed ? "satd" : "dataset-extraido";
+      await downloadCsv(STATE.latestResult.rows, `${safeRepo}-${STATE.latestResult.branch}-${suffix}.csv`);
       sendResponse({ ok: true });
     })();
     return true;
   }
 
-  if (message?.type === "start_analysis") {
+  if (message?.type === "extract_repository") {
     (async () => {
       if (STATE.running) {
-        sendResponse({ ok: false, error: "Já existe uma análise em execução." });
+        sendResponse({ ok: false, error: "Já existe um processamento em execução." });
         return;
       }
 
@@ -59,16 +60,50 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
       try {
         const settings = await getSettings();
-        const result = await analyzeRepository(message.repoContext, settings, broadcastProgress);
+        const result = await extractRepository(message.repoContext, settings, broadcastProgress);
         STATE.latestResult = result;
         sendResponse({ ok: true, result });
       } catch (error) {
-        sendResponse({ ok: false, error: error.message || "Falha no pipeline." });
+        sendResponse({ ok: false, error: error.message || "Falha na extração." });
       } finally {
         STATE.running = false;
       }
     })();
 
+    return true;
+  }
+
+  if (message?.type === "analyze_dataset") {
+    (async () => {
+      if (STATE.running) {
+        sendResponse({ ok: false, error: "Já existe um processamento em execução." });
+        return;
+      }
+
+      if (!STATE.latestResult?.rows) {
+        sendResponse({ ok: false, error: "Extraia o dataset do repositório antes de analisar." });
+        return;
+      }
+
+      STATE.running = true;
+
+      try {
+        const settings = await getSettings();
+        const result = await analyzeExtractedDataset(STATE.latestResult, settings, broadcastProgress);
+        STATE.latestResult = result;
+        sendResponse({ ok: true, result });
+      } catch (error) {
+        sendResponse({ ok: false, error: error.message || "Falha na análise." });
+      } finally {
+        STATE.running = false;
+      }
+    })();
+
+    return true;
+  }
+
+  if (message?.type === "start_analysis") {
+    sendResponse({ ok: false, error: "Use primeiro a extração do repositório e depois a análise do dataset." });
     return true;
   }
 
