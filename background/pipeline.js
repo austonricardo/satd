@@ -10,7 +10,17 @@ function extractCommentsByLanguage(language, content, settings) {
   return [];
 }
 
-export async function analyzeRepository(repoContext, settings, progressCallback = () => {}) {
+function buildClassifierDataset(rows) {
+  return rows
+    .filter((row) => Number.isInteger(row.id_comentario) && row.comentario)
+    .map((row) => ({
+      id_comentario: row.id_comentario,
+      comentario: row.comentario,
+      url_arquivo: row.url_arquivo
+    }));
+}
+
+export async function extractRepository(repoContext, settings, progressCallback = () => {}) {
   const { owner, repo } = repoContext;
   const branch = repoContext.branch || await getDefaultBranch(owner, repo, settings.githubToken);
 
@@ -24,19 +34,18 @@ export async function analyzeRepository(repoContext, settings, progressCallback 
   });
 
   const rows = [];
-  const classifierDataset = [];
   let nextCommentId = 1;
   let processedFiles = 0;
 
   for (const path of targetFiles) {
     processedFiles += 1;
     const language = detectLanguageFromPath(path);
-    const pct = Math.round((processedFiles / Math.max(1, targetFiles.length)) * 70);
+    const pct = Math.round((processedFiles / Math.max(1, targetFiles.length)) * 90);
 
     progressCallback({
       phase: "extract_comments",
-      progress: 10 + pct,
-      message: `Processando ${processedFiles}/${targetFiles.length}: ${path}`
+      progress: 5 + pct,
+      message: `Extraindo ${processedFiles}/${targetFiles.length}: ${path}`
     });
 
     try {
@@ -47,52 +56,74 @@ export async function analyzeRepository(repoContext, settings, progressCallback 
         const idComentario = nextCommentId;
         nextCommentId += 1;
 
-        const row = {
+        rows.push({
           id_comentario: idComentario,
           projeto_branch_versao: `${owner}/${repo}@${branch}`,
           url_arquivo: `https://github.com/${owner}/${repo}/blob/${branch}/${path}`,
           comentario: comment,
-          is_satd: false,
-          classificacao_api: "pending"
-        };
-        rows.push(row);
-        classifierDataset.push({
-          id_comentario: idComentario,
-          comentario: comment,
-          url_arquivo: row.url_arquivo
+          is_satd: "",
+          classificacao_api: ""
         });
       }
     } catch (error) {
       rows.push({
+        id_comentario: "",
         projeto_branch_versao: `${owner}/${repo}@${branch}`,
         url_arquivo: `https://github.com/${owner}/${repo}/blob/${branch}/${path}`,
         comentario: `Erro ao processar arquivo: ${error.message}`,
-        is_satd: false,
-        classificacao_api: "file_error"
+        is_satd: "",
+        classificacao_api: ""
       });
     }
   }
 
-  progressCallback({
-    phase: "classify_dataset",
-    progress: 95,
-    message: "Classificando dataset completo no web service..."
-  });
-
-  const classifications = await classifyDataset(classifierDataset, settings);
-  rows.forEach((row, index) => {
-    const classified = classifications[index] || {};
-    row.is_satd = Boolean(classified.is_satd);
-    row.classificacao_api = classified.classificacao_api || "error";
-  });
-
-  progressCallback({ phase: "done", progress: 100, message: "Análise concluída." });
+  progressCallback({ phase: "done", progress: 100, message: "Extração concluída." });
 
   return {
     repo: `${owner}/${repo}`,
     branch,
     totalFiles: targetFiles.length,
     totalComments: rows.length,
+    analyzed: false,
     rows
   };
+}
+
+export async function analyzeExtractedDataset(extractedResult, settings, progressCallback = () => {}) {
+  const classifierDataset = buildClassifierDataset(extractedResult?.rows || []);
+
+  progressCallback({
+    phase: "classify_dataset",
+    progress: 20,
+    message: "Classificando dataset completo no web service..."
+  });
+
+  const classifications = await classifyDataset(classifierDataset, settings);
+  const classificationById = new Map(
+    classifierDataset.map((item, index) => [item.id_comentario, classifications[index] || {}])
+  );
+
+  const rows = (extractedResult?.rows || []).map((row) => {
+    if (!Number.isInteger(row.id_comentario)) return { ...row };
+
+    const classified = classificationById.get(row.id_comentario) || {};
+    return {
+      ...row,
+      is_satd: Boolean(classified.is_satd),
+      classificacao_api: classified.classificacao_api || "error"
+    };
+  });
+
+  progressCallback({ phase: "done", progress: 100, message: "Análise concluída." });
+
+  return {
+    ...extractedResult,
+    analyzed: true,
+    rows
+  };
+}
+
+export async function analyzeRepository(repoContext, settings, progressCallback = () => {}) {
+  const extractedResult = await extractRepository(repoContext, settings, progressCallback);
+  return analyzeExtractedDataset(extractedResult, settings, progressCallback);
 }
